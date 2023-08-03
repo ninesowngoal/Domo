@@ -5,14 +5,14 @@ def kick(bot, discord, commands):
     '''
     @bot.command(name = "kick")
     @commands.has_permissions(kick_members = True)
-    async def kick(ctx, member: discord.Member, *, reason=None): #reason = none, bot won't give a reason for kick. Change so user can give a reason.
+    async def kick(ctx, member: discord.Member, *, reason=None): # - bot won't give a reason for kick.
         await member.kick(reason = reason)
-        await ctx.send(f"{member} has been kicked.") #sends who was kicked in #admin-only.
-        channel = bot.get_channel(839557877567455233)
+        await ctx.send(f"{member} has been kicked.")
+        channel = bot.get_channel(YOUR_CHANNEL_ID_HERE)
         await channel.send(f"{member} has been kicked from the server.")
-        print(f"{member} has been kicked.") #prints who was kicked in terminal.
+        print(f"{member} has been kicked.") # - prints who was kicked in terminal.
     
-    @kick.error #if someone who isn't a mod or admin tries to kick, it tells them that they don't have permissions.
+    @kick.error # - if someone who isn't a mod or admin tries to kick, it tells them that they don't have permissions.
     async def kick_error(ctx, error):
         if isinstance(error, commands.MissingPermissions):
             await ctx.send("You don't have permission to kick people.")
