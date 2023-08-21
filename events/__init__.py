@@ -1,1 +1,1 @@
-__all__ = ["join", "leave", "react_role"]
+__all__ = ["join", "leave", "react_role", "voice_log"]

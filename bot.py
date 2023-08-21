@@ -37,11 +37,13 @@ async def on_ready():
     print("{0.user} is ready.".format(bot)) # - prints that Domo is ready when this file is run.
     print("----------------------")
 
-# - load commands and events from cmds and events folders.
-join.join_server(bot)
-leave.leave_server(bot)
+# --------- Commands ---------
 kick.kick(bot, discord, commands)
 ban.ban(bot, discord, commands)
+# --------- Events ---------
+join.join_server(bot)
+leave.leave_server(bot)
 react_role.role_on_react(bot, discord)
+voice_log.voice_log(bot)
 
 bot.run(config["token"])
