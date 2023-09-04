@@ -1,7 +1,12 @@
 # DOMO
 Domo is a discord bot made for personal use.
-She is an admin bot that is currently able to ban and kick users.
-She can also send messages for when a user joins or leaves the server. Upon a user joining, however, she will also send a welcome DM.
+She is an admin bot that is currently able to:
+  -Ban and kick users with specific reasons for the kick/ban.
+  -Track exp and level of users in a server.
+  -Give roles to users when they react to a specific message with a specific emoji.
+  -Log who joins/leaves voice calls.
+  -Log who joins/leaves a server.
+  -Send a welcome DM.
 
 ## Installation
 If you wish to install this bot, download the code as a zip file from the dropdown menu.
