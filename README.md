@@ -1,6 +1,7 @@
 # DOMO
 Domo is a discord bot originally made for personal use.
 
+
 She is an admin bot that is currently able to:
   * Ban and kick users with specific reasons for the kick/ban.
   * Track exp and level of users in a server.
