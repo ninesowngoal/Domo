@@ -3,7 +3,7 @@ Domo is a discord bot originally made for personal use.
 
 She is an admin bot that is currently able to:
   * Ban and kick users with specific reasons for the kick/ban.
-  * Track exp and level of users in a server.
+  * Track exp and level of users in a server (using a SQL database).
   * Give roles to users when they react to a specific message with a specific emoji.
   * Log who joins/leaves voice calls.
   * Log who joins/leaves a server.
