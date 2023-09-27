@@ -32,7 +32,7 @@ member_exp_db = MemberExpDatabase()
 # - Dictionary to store MemberExp instances by member_id
 member_exp_dict = {}
 
-# Load data from the database when the bot starts
+# - Load data from the database when the bot starts
 load_data_from_database()
 
 def member_text_exp(bot, discord):
@@ -45,9 +45,9 @@ def member_text_exp(bot, discord):
         if message.author.bot:
             return
 
-        guild = bot.get_guild(240758377913778177)
+        guild = bot.get_guild(YOUR SERVER ID HERE)
         member_id = message.author.id
-        channel = bot.get_channel(1140664734484549765)
+        channel = bot.get_channel(YOUR CHANNEL ID HERE)
         ctx = await bot.get_context(message)
 
         # - Gets or creates a MemberExp instance for the member
@@ -68,6 +68,7 @@ def member_text_exp(bot, discord):
             await ctx.send(f"<@{message.author.id}> has levelled up to level {member_exp.level}!")
             await channel.send(f"{message.author} has levelled up to level {member_exp.level}!")
         
+        # - Will inform of any errors with database (functions).
         absolute_path = os.path.dirname(__file__)
         db_file = os.path.join(absolute_path, "experience.db")
         db_con = sqlite3.connect(db_file)

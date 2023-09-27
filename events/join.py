@@ -8,5 +8,5 @@ def join_server(bot):
         guild = member.guild
         await member.send(f"Welcome to {guild}, {member}! \n Please make sure to read the message in #welcome-citizen.") 
         print(f"{member} has joined {guild}.") # - shows who joined in bot terminal.
-        channel = bot.get_channel(1140664734484549765)
+        channel = bot.get_channel(YOUR CHANNEL ID HERE)
         await channel.send(f"{member} has entered {guild}.")

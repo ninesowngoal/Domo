@@ -9,7 +9,7 @@ def kick(bot, discord, commands):
     async def kick(ctx, members: commands.Greedy[discord.Member], *, reason = " "):
         for member in members: # - iterate over the commands.Greedy[discord.Member] list.
             await member.kick(reason = reason)
-        channel = bot.get_channel(1140664734484549765)
+        channel = bot.get_channel(YOUR CHANNEL ID HERE)
         await channel.send(f"{member} has been kicked from the server. Reason: {reason}")
         print(f"{member} has been kicked. Reason: {reason}")
     
