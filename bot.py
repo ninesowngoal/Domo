@@ -1,13 +1,15 @@
+# - import asyncio
+import asyncio
+
 # - prevents the generation of __pycache__ files
 import sys
 sys.dont_write_bytecode = True
 
-# - import sqlite3
-import sqlite3
-
 # - import os for relative path.
 import os
+from definitions.path import root_dir
 absolute_path = os.path.dirname(__file__)
+
 
 # - enable logging
 import logging
@@ -24,13 +26,27 @@ from discord.ext import commands, tasks
 # - import events and commands
 from cmds import *
 from events  import *
-from events.experience import *
 
 intents = discord.Intents.default()
 intents.members = True
 intents.message_content = True
 
 bot = commands.Bot(command_prefix = '$', intents = intents)
+
+#------Load cogs------
+try:
+    async def load_extensions():
+        for cog in os.listdir(f"{root_dir}/cogs"):
+            if cog.endswith(".py"):
+                # - removes the .py from filename.
+                await bot.load_extension(f"cogs.{cog[:-3]}")
+except FileNotFoundError:
+    print("There is no such directory or file! Check and try again.")
+
+@bot.command()
+async def load(ctx, extension):
+    bot.load_extension(f"cogs.{extension}")
+    await ctx.send("Loaded extension!")
 
 # - Check for config.json, if it doesn't find it, will exit and give an error message.
 if os.path.exists("{}/config.json".format(absolute_path)) == False:
@@ -48,12 +64,14 @@ async def on_ready():
 kick.kick(bot, discord, commands)
 ban.ban(bot, discord, commands)
 # --------- Events ---------
-voice_exp.member_voice_exp(bot)
 join.join_server(bot)
 leave.leave_server(bot)
 voice_log.voice_log(bot)
-level_roles.level_up_role(bot, discord)
-text_exp.member_text_exp(bot, discord)
 react_role.role_on_react(bot, discord)
 
-bot.run(config["token"], log_handler=handler, log_level=logging.DEBUG)
+async def main():
+    async with bot:
+        await load_extensions() # - loads cogs on startup.
+        await bot.start(config["token"]) # - set up logging in future.
+
+asyncio.run(main())
