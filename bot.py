@@ -17,7 +17,6 @@ handler = logging.FileHandler(filename=f'{absolute_path}/domo.log', encoding='ut
 
 # - import json for config.json
 import json
-import sys
 
 # - import required dependencies
 import discord

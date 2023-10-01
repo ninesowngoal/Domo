@@ -3,8 +3,19 @@ import sqlite3
 import discord
 from discord.ext import commands
 import math
+import asyncio
+import json
+import sys
+from definitions.path import root_dir
 
 absolute_path = os.path.dirname(__file__)
+
+# - Check for config.json, if it doesn't find it, will exit and give an error message.
+if os.path.exists("{}/config.json".format(root_dir)) == False:
+    sys.exit("Unable to find 'config.json'! Please add it and try again.")
+else:
+    with open("{}/config.json".format(root_dir)) as file:
+        config = json.load(file)
 
 class MemberExp:
     # - Class to store exp and level for each member.
@@ -84,16 +95,41 @@ voice_sessions = {}
 # Load data from the database when the bot starts
 load_data_from_database()
 
+def new_member_exp(member_exp):
+    '''
+    Creates a new instance of the MemberExp class
+    when a new member does something to warrant
+    xp tracking.
+    '''
+    if member_exp is None:
+        member_exp = MemberExp(member_exp)
+        member_exp_dict[member_exp] = member_exp
+    
+def calculate_voice_exp(time_spent):
+    '''
+    Calculates the amount of time spent in
+    voice call and returns the xp earned based
+    on that time.
+    '''
+    time_spent_minutes = (time_spent.total_seconds() - 120) / 60
+    xp_earned = math.floor(time_spent_minutes * 16.67)
+    return xp_earned
+
 class Experience(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
     @commands.Cog.listener()
     async def on_message(self, message):
+        '''
+        Gives 50xp every message a user sends in
+        the guild. Disregards itself as a target
+        for xp.
+        '''
         if message.author.bot:
             return
         
-        channel = self.bot.get_channel(YOUR CHANNEL ID HERE)
+        channel = self.bot.get_channel(config["log_private"])
         ctx = await self.bot.get_context(message)
 
         # - Get or create a MemberExp instance.
@@ -115,65 +151,106 @@ class Experience(commands.Cog):
             await channel.send(f"{message.author} is now level {member_exp.level}.")
         
         #------------Add roles for certain levels------------
-        # - Check if has desired role already.
-        has_desired_role = any(role.name == "YOUR ROLE NAME HERE" for role in message.author.roles)
+        # - Check if has Fellow Citizens already.
+        has_desired_role = any(role.name == "Fellow Citizens" for role in message.author.roles)
         # - Get required guild, role and member ids.
         guild = message.guild
-        role = discord.utils.get(guild.roles, name="YOUR ROLE NAME HERE")
+        role = discord.utils.get(guild.roles, name="Fellow Citizens")
         member = guild.get_member(message.author.id)
 
-        # - Give desired role if they don't have it. Or else don't.
+        # - Give Fellow Citizens if they don't have it. Or else don't.
         if role and member_exp.level == 7:
             if has_desired_role:
                 return
             elif has_desired_role == False:
                 await member.add_roles(role)
-                await ctx.send(f"Congratulations <@{message.author.id}>! You are now a {role}!")
+                await ctx.send(f"Congratulations <@{message.author.id}>! You are now a Fellow Citizen!")
+        
+        role_model = discord.utils.get(guild.roles, name="Model Citizens")
+
+        if role_model and member_exp.level == 75:
+            await member.add_roles(role_model)
+            await ctx.send(f"Congratulations <@{message.author.id}>! You are a Model Citizen!")
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
+        '''
+        Timestamps when a user joins and leaves a voice channel.
+        Calculates time spent and xp earned based on the total
+        time spent in voice chat.
+        '''
+        voice_channels = [YOUR VOICE CHANNEL IDS HERE]
+
         if before.channel != after.channel:
             # - User joined a voice channel.
-            if after.channel is not None:
+            if after.channel and after.channel.id in voice_channels:
                 voice_sessions[member.id] = discord.utils.utcnow()
-            elif before.channel is not None:
+            # - User has left a voice channel.
+            elif before.channel and before.channel.id in voice_channels:
+                # - Get timestamp value of user who left the voice channel.
                 start_time = voice_sessions.get(member.id)
                 if start_time is not None:
-                    end_time = discord.utils.utcnow()
-                    time_spent = end_time - start_time
+                    channel = self.bot.get_channel(config["log_public"])
 
-                    channel = self.bot.get_channel(YOUR CHANNEL ID HERE)
                     member_exp = member_exp_dict.get(member.id)
-
-                    if member_exp is None:
-                        member_exp = MemberExp(member.id)
-                        member_exp_dict[member.id] = member_exp
-                    
+                    new_member_exp(member_exp)
                     previous_level = member_exp.level
 
-                    time_spent_minutes = time_spent.total_seconds() / 60
-                    xp_earned = math.floor(time_spent_minutes * 16.67) # - adjust 16.67 as you wish
-                    member_exp.gain_xp(math.floor(xp_earned))
+                    # - Sleep to cover accidental disconnects and channel moving.
+                    print(f"Domo will wait 2 minutes for {member.name} to come back!")
+                    await asyncio.sleep(120)
+                    print("Domo has finished waiting!")
+
+                    # - Calculate time spent and xp earned.
+                    end_time = discord.utils.utcnow()
+                    time_spent = end_time - start_time
+                    xp_earned = calculate_voice_exp(time_spent)
+                    member_exp.gain_xp(xp_earned)
                     member_exp_db.save_member_exp(member.id, member_exp.level, member_exp.curr_xp)
                     await channel.send(f"<@{member.id}>, you have gained {xp_earned}xp.")
-                    print(f"<{member.id}> gained {xp_earned}xp.")
+                    print(f"<{member.name}> gained {xp_earned}xp.")
 
                     if member_exp.level > previous_level:
                         await channel.send(f"<@{member.id}> has levelled up to level {member_exp.level}!")
                     
                     #------------Add roles for certain levels------------
-                    # - Check if has desired role already.
-                    has_desired_role = any(role.name == "YOUR ROLE NAME HERE" for role in member.roles)
+                    # - Check if has Fellow Citizens already.
+                    has_desired_role = any(role.name == "Fellow Citizens" for role in member.roles)
                     # - Get required guild and role.
                     guild = member.guild
-                    role = discord.utils.get(guild.roles, name="YOUR ROLE NAME HERE")
+                    role = discord.utils.get(guild.roles, name="Fellow Citizens")
 
                     if role and member_exp.level == 7:
                         if has_desired_role:
                             return
                         elif has_desired_role == False:
                             await member.add_roles(role)
-                            await channel.send(f"Congratulations <@{member.id}>! You are now a {role}!")
+                            await channel.send(f"Congratulations <@{member.id}>! You are now a Fellow Citizen!")
+                    
+                    role_model = discord.utils.get(guild.roles, name="Model Citizens")
+
+                    if role_model and member_exp.level == 75:
+                        await member.add_roles(role_model)
+                        await channel.send(f"Congratulations <@{member.id}>! You are a Model Citizen!")
+
+    @commands.command(name = "checklvl")
+    async def check_level(self, ctx):
+        absolute_path = os.path.dirname(__file__)
+        db_file = os.path.join(absolute_path, "experience.db")
+        db_con = sqlite3.connect(db_file)
+        cur = db_con.cursor()
+        member_id = ctx.author.id
+        cur.execute(f"SELECT level, xp FROM experience WHERE member = ?", (member_id,))
+        level_check = cur.fetchone()
+        await ctx.send(f"<@{member_id}>")
+        await ctx.send("Here are your details:")
+        if level_check:
+            await ctx.send(f"Level: {level_check[0]}")
+            await ctx.send(f"XP: {level_check[1]}")
+        else:
+            await ctx.send("You don't have any data in the database.")
+        
+        db_con.close()
 
 async def setup(bot):
     await bot.add_cog(Experience(bot))

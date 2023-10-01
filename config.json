@@ -1,3 +1,5 @@
 {
-    "token": "YOUR BOT TOKEN HERE"
+    "token": "YOUR BOT TOKEN HERE",
+    "log_public" : "YOUR TEXT CHANNEL ID HERE",
+    "log_private" : "YOUR TEXT CHANNEL ID HERE"
   }

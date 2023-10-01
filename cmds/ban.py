@@ -1,3 +1,15 @@
+import os
+import sys
+import json
+from definitions.path import root_dir
+
+# - Check for config.json, if it doesn't find it, will exit and give an error message.
+if os.path.exists("{}/config.json".format(root_dir)) == False:
+    sys.exit("Unable to find 'config.json'! Please add it and try again.")
+else:
+    with open("{}/config.json".format(root_dir)) as file:
+        config = json.load(file)
+
 def ban(bot, discord, commands):
     '''
     Bans a member of the discord server. Sends who was banned
@@ -9,7 +21,7 @@ def ban(bot, discord, commands):
     async def ban(ctx, members: commands.Greedy[discord.Member], *, reason = " "):
         for member in members:
             await member.ban(reason = reason)
-        channel = bot.get_channel(YOUR CHANNEL ID) # - Bot-logs text channel.
+        channel = bot.get_channel(config["log_private"]) # - Bot-logs text channel.
         await member.ban(reason = reason)
         await channel.send(f"{member} has been banned from the server. Reason: {reason}")
         print(f"{member} has been banned. Reason: {reason}") # - Prints who was banned in terminal.
