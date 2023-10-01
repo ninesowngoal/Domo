@@ -215,23 +215,17 @@ class Experience(commands.Cog):
                     
                     #------------Add roles for certain levels------------
                     # - Check if has Fellow Citizens already.
-                    has_desired_role = any(role.name == "Fellow Citizens" for role in member.roles)
+                    has_desired_role = any(role.name == "YOUR ROLE NAME HERE" for role in member.roles)
                     # - Get required guild and role.
                     guild = member.guild
-                    role = discord.utils.get(guild.roles, name="Fellow Citizens")
+                    role = discord.utils.get(guild.roles, name="YOUR ROLE NAME HERE")
 
                     if role and member_exp.level == 7:
                         if has_desired_role:
                             return
                         elif has_desired_role == False:
                             await member.add_roles(role)
-                            await channel.send(f"Congratulations <@{member.id}>! You are now a Fellow Citizen!")
-                    
-                    role_model = discord.utils.get(guild.roles, name="Model Citizens")
-
-                    if role_model and member_exp.level == 75:
-                        await member.add_roles(role_model)
-                        await channel.send(f"Congratulations <@{member.id}>! You are a Model Citizen!")
+                            await channel.send(f"Congratulations <@{member.id}>! You are now a {role}!")
 
     @commands.command(name = "checklvl")
     async def check_level(self, ctx):

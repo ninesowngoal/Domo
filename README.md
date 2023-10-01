@@ -4,6 +4,7 @@ Domo is a discord bot originally made for personal use.
 She is an admin bot that is currently able to:
   * Ban and kick (multiple) users with specific reasons for the kick/ban.
   * Track exp and level of users in a server (using a SQL database).
+  * Allow members to view their current level and experience points.
   * Give exp to members when they send a message or based on how long they were in a voice channel.
   * Give roles to members when they reach a certain level or reach certain levels.
   * Give roles to users when they react to a specific message with a specific emoji.
@@ -13,6 +14,8 @@ She is an admin bot that is currently able to:
 
 ## Installation
 If you wish to install this bot, download the code as a zip file from the dropdown menu.
+
+In each command, event and cog, there are parts of the code that you will need to edit. You will need to edit the config.json file too.
 
 Extract the zip file wherever you wish.
 
