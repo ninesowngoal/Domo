@@ -5,28 +5,43 @@ import asyncio
 import sys
 sys.dont_write_bytecode = True
 
+import sqlite3
+
 # - import os for relative path.
 import os
-from definitions.path import root_dir
 absolute_path = os.path.dirname(__file__)
-
+root_dir = os.path.realpath(os.path.join(os.path.dirname(__file__), '..'))
 
 # - enable logging
 import logging
-handler = logging.FileHandler(filename=f'{absolute_path}/domo.log', encoding='utf-8', mode='w')
+import logging.handlers
+
+logger = logging.getLogger('discord')
+logger.setLevel(logging.DEBUG)
+logging.getLogger('discord.http').setLevel(logging.INFO)
+logging.getLogger('discord.gateway').setLevel(logging.INFO)
+
+handler = logging.handlers.RotatingFileHandler(
+    filename = f"{absolute_path}/domo.log",
+    encoding = "utf-8",
+    maxBytes = 32 * 1024 * 1024, # - 32 MiB
+    backupCount = 5, # - Rotates through 5 files.
+)     
+dt_fmt = '%Y-%m-%d %H:%M:%S'
+formatter = logging.Formatter('[{asctime}] [{levelname:<8}] {name}: {message}', dt_fmt, style='{')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
 # - import json for config.json
 import json
+import sys
 
 # - import required dependencies
 import discord
-from discord.ext import commands, tasks
-
-# - import events and commands
-from cmds import *
-from events  import *
+from discord.ext import commands
 
 intents = discord.Intents.default()
+intents.guilds = True
 intents.members = True
 intents.message_content = True
 
@@ -35,17 +50,31 @@ bot = commands.Bot(command_prefix = '$', intents = intents)
 #------Load cogs------
 try:
     async def load_extensions():
-        for cog in os.listdir(f"{root_dir}/cogs"):
+        for cog in os.listdir(f"{absolute_path}/cogs"):
             if cog.endswith(".py"):
                 # - removes the .py from filename.
                 await bot.load_extension(f"cogs.{cog[:-3]}")
 except FileNotFoundError:
     print("There is no such directory or file! Check and try again.")
 
-@bot.command()
 async def load(ctx, extension):
     bot.load_extension(f"cogs.{extension}")
     await ctx.send("Loaded extension!")
+
+#------Create shared databases------
+db_path = os.path.join(absolute_path, "sql")
+os.makedirs(db_path, exist_ok=True)
+con = sqlite3.connect(f"{db_path}/toggles.db")
+cur = con.cursor()
+
+cur.execute('''CREATE TABLE IF NOT EXISTS logs (
+    server_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    channel_id INTEGER,
+    state INTEGER
+    )'''
+)
+con.commit()
+con.close()
 
 # - Check for config.json, if it doesn't find it, will exit and give an error message.
 if os.path.exists("{}/config.json".format(absolute_path)) == False:
@@ -56,21 +85,12 @@ else:
 
 @bot.event 
 async def on_ready():
-    print("{0.user} is ready.".format(bot)) # - prints that Domo is ready when this file is run.
+    print("{0.user} is ready.".format(bot))
     print("----------------------")
-
-# --------- Commands ---------
-kick.kick(bot, discord, commands)
-ban.ban(bot, discord, commands)
-# --------- Events ---------
-join.join_server(bot)
-leave.leave_server(bot)
-voice_log.voice_log(bot)
-react_role.role_on_react(bot, discord)
 
 async def main():
     async with bot:
-        await load_extensions() # - loads cogs on startup.
-        await bot.start(config["token"]) # - set up logging in future.
+        await load_extensions()
+        await bot.start(config["token"])
 
 asyncio.run(main())
