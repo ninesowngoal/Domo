@@ -15,7 +15,11 @@ class HelpEmbed(discord.Embed):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.timestamp = datetime.datetime.utcnow()
-        text = "Use help [command] or help [category] for more information | <> is required | [] is optional"
+        text = (
+            "Use help [command] or help [category] for more information"
+            "| <> is required |" 
+            "[] is optional"
+            )
         self.set_footer(text=text)
         self.color = discord.Color.dark_purple()
 
@@ -47,12 +51,12 @@ class MyHelp(commands.HelpCommand):
                     name = cog.qualified_name
                     description = cog.description or "No description"
                 else:
-                    name = "No"
+                    name = "No Category"
                     description = "Commands with no category"
 
-                embed.add_field(name=f"{name} Category [{amount_commands}]", value=description)
+                embed.add_field(name=f"{name} [{amount_commands}]", value=description)
 
-        embed.description = f"{len(bot.commands)} commands | {usable} usable"
+        embed.description = f"List of command modules."
         await self.send(embed=embed)
 
     async def send_command_help(self, command):
@@ -74,7 +78,6 @@ class MyHelp(commands.HelpCommand):
                 name="Cooldown",
                 value=f"{cooldown.rate} per {cooldown.per:.0f} seconds",
             )
-
         await self.send(embed=embed)
 
     async def send_help_embed(self, title, description, commands):
@@ -92,7 +95,7 @@ class MyHelp(commands.HelpCommand):
 
     async def send_cog_help(self, cog):
         title = cog.qualified_name or "No"
-        await self.send_help_embed(f'{title} Category', cog.description, cog.get_commands())
+        await self.send_help_embed(f'{title}', cog.description, cog.get_commands())
 
 
 class Help(commands.Cog):
