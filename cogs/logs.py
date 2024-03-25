@@ -1,6 +1,4 @@
 import sqlite3
-import time
-import discord
 from discord.ext import commands
 import os
 root_dir = os.path.realpath(
@@ -20,6 +18,7 @@ async def log_cmd_first(cur, con, ctx):
                 WHERE channel_id IS NULL
                 """, (ctx.channel.id,))
     con.commit()
+    con.close()
     await ctx.send("Logs will now be sent to this channel.")
     print(
         f"[COMMAND: $logs] Executed successfully in: {ctx.guild.name}. "
@@ -39,6 +38,7 @@ async def log_cmd_second(cur, con, ctx):
                 SET channel_id = ?
                 """, (ctx.channel.id,))
     con.commit()
+    con.close()
     # - New logs channel set.
     await ctx.send(
         "Logs channel updated. " 
@@ -61,6 +61,7 @@ async def log_cmd_off(cur, con, ctx):
                 SET channel_id = NULL
                 """)
     con.commit()
+    con.close()
     await ctx.send(
         "Logs will no longer be sent in this server."
         )
@@ -109,6 +110,7 @@ async def turn_on_logs(ctx, column_name):
         """, (1,)
     )
     con.commit()
+    con.close()
 
 
 async def turn_off_logs(ctx, column_name):
@@ -123,6 +125,7 @@ async def turn_off_logs(ctx, column_name):
         """, (0,)
     )
     con.commit()
+    con.close()
 
 
 class Logs(commands.Cog):
@@ -142,10 +145,13 @@ class Logs(commands.Cog):
         try:
             log_res = await log_check(guild, "channel_id")
             vlog_res = await log_check(guild, "voice")
-            vlog_res_map = {0: "No", 1: "Yes"}
+            vlog_res_map = {0: "OFF", 1: "ON"}
+            jlog_res = await log_check(guild, "user_join")
+            jlog_res_map = {0: "OFF", 1: "ON"}
             await ctx.send(
                 f"Logs channel: {log_res}\n"
-                f"Voice logs: {vlog_res_map.get(vlog_res)}"
+                f"Voice logs: {vlog_res_map.get(vlog_res)}\n"
+                f"Join message: {jlog_res_map.get(jlog_res)}"
                 )
         except sqlite3.Error as e:
             await ctx.send("Command failed, check terminal.")
@@ -231,6 +237,10 @@ class Logs(commands.Cog):
                     f"[COMMAND: $voicelog] Successfully turned off logs in: {ctx.guild}."
                 )
         except sqlite3.Error as e:
+            await ctx.send(
+                "I cannot execute the command. "
+                "Please check my terminal and logs!"
+            )
             print(f"[COMMAND: $voicelog] Error: {e}")
         finally:
             if con:
@@ -260,6 +270,7 @@ class Logs(commands.Cog):
         finally:
             if con:
                 con.close()
+
 
 async def setup(bot):
     await bot.add_cog(Logs(bot))

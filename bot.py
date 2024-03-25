@@ -28,17 +28,21 @@ handler = logging.handlers.RotatingFileHandler(
     backupCount = 5, # - Rotates through 5 files.
 )     
 dt_fmt = '%Y-%m-%d %H:%M:%S'
-formatter = logging.Formatter('[{asctime}] [{levelname:<8}] {name}: {message}', dt_fmt, style='{')
+formatter = logging.Formatter('[{asctime}] [{levelname:<8}] {name}: {message}',
+                              dt_fmt, style='{')
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
 # - import json for config.json
-import json
+import json 
 import sys
 
 # - import required dependencies
 import discord
 from discord.ext import commands
+#from discord import app_commands
+
+from events import server_join
 
 intents = discord.Intents.default()
 intents.guilds = True
@@ -61,27 +65,15 @@ async def load(ctx, extension):
     bot.load_extension(f"cogs.{extension}")
     await ctx.send("Loaded extension!")
 
-#------Create shared databases------
-db_path = os.path.join(absolute_path, "sql")
-os.makedirs(db_path, exist_ok=True)
-con = sqlite3.connect(f"{db_path}/toggles.db")
-cur = con.cursor()
-
-cur.execute('''CREATE TABLE IF NOT EXISTS logs (
-    server_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    channel_id INTEGER,
-    state INTEGER
-    )'''
-)
-con.commit()
-con.close()
-
-# - Check for config.json, if it doesn't find it, will exit and give an error message.
+# - Check for config.json, if it doesn't find it,
+# - will exit and give an error message.
 if os.path.exists("{}/config.json".format(absolute_path)) == False:
     sys.exit("Unable to find 'config.json'! Please add it and try again.")
 else:
     with open("{}/config.json".format(absolute_path)) as file:
         config = json.load(file)
+
+server_join.server_join(bot)
 
 @bot.event 
 async def on_ready():
