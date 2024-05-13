@@ -1,9 +1,19 @@
 import os
 import sqlite3
 import discord
-from discord.ext import commands
 
 def server_join(bot):
+    '''
+    Called when Domo joins a server.\n
+    Domo will do two things:\n
+    First, Domo will thank the user and send
+    them info about using the help command to
+    see what she can do. Will also link the
+    github.\n
+    Second, Domo will create a database for
+    the server. Essential for the commands
+    and events to work.
+    '''
     @bot.event
     async def on_guild_join(guild):
         '''
@@ -68,10 +78,6 @@ def server_join(bot):
                     date INTEGER,
                     reason TEXT
                     )''',
-                    '''CREATE TABLE IF NOT EXISTS welcome_leave (
-                    welcome INTEGER PRIMARY KEY,
-                    leave INTEGER
-                    )''',
                     '''CREATE TABLE IF NOT EXISTS auto_assign_role (
                     role_id INTEGER PRIMARY KEY AUTOINCREMENT,
                     toggle INTEGER
@@ -84,13 +90,23 @@ def server_join(bot):
                     )''',
                     '''
                     CREATE TABLE IF NOT EXISTS logs (
-                    channel_id INTEGER,
+                    channel_id INTEGER NULL,
                     voice INTEGER,
                     xp INTEGER,
-                    user_join INTEGER,
-                    user_leave INTEGER,
                     roles_given INTEGER,
                     del_msgs INTEGER
+                    )''',
+                    '''
+                    CREATE TABLE IF NOT EXISTS salutations (
+                    channel_id INTEGER NULL,
+                    welcome INTEGER,
+                    welcome_dm INTEGER,
+                    welcome_msg TEXT,
+                    welcome_dm_msg TEXT,
+                    leave INTEGER,
+                    leave_dm INTEGER,
+                    leave_msg TEXT,
+                    leave_dm_msg TEXT
                     )'''
                   ]
         
@@ -104,18 +120,45 @@ def server_join(bot):
             )
             con.commit()
 
-            # - Input default value for the welcome/leave table.
+            # - Input default value for the salutations table.
             cur.execute(
-                "INSERT INTO welcome_leave (welcome, leave) VALUES (?, ?)",
-                (0, 0)
+                """INSERT INTO salutations (
+                    channel_id,
+                    welcome,
+                    welcome_dm,
+                    welcome_msg,
+                    welcome_dm_msg,
+                    leave,
+                    leave_dm,
+                    leave_msg,
+                    leave_dm_msg
+                    ) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                (
+                 None,
+                 0,
+                 0,
+                 "Welcome /user/!",
+                 "Welcome to /server/, /user/!",
+                 0,
+                 0,
+                 "Goodbye /user/!",
+                 "I hope you enjoyed your stay in /server/, /user/!"
+                 )
                 )
             con.commit()
 
             # - Input default values for bot logs.
             cur.execute(
-                '''INSERT INTO logs (channel_id, voice, xp, user_join, user_leave, roles_given, del_msgs)
-                VALUES(?, ?, ?, ?, ?, ?, ?)''',
-                (None, 0, 0, 0, 0, 0, 0)
+                '''INSERT INTO logs (
+                    channel_id,
+                    voice,
+                    xp,
+                    roles_given,
+                    del_msgs
+                    ) VALUES (?, ?, ?, ?, ?)''',
+                (None, 0, 0, 0, 0)
                 )
             con.commit()
 
@@ -123,8 +166,13 @@ def server_join(bot):
                 "[EVENT: on_guild_join] " 
                 f"Successfully set up database and tables for: {guild.name}"
                 )
-        except sqlite3.error as e:
-            print(f"[EVENT ERROR: on_guild_join] Error: {e}")
+        except sqlite3.Error as e:
+            if len(e.args) > 1:
+                print(f"[EVENT ERROR: on_guild_join] Error: {e}"
+                    f"Error code: {e.args[0]}"
+                    f"Error message: {e.args[1]}")
+            else:
+                print(f"[EVENT ERROR: on_guild_join] Error: {e}")
         finally:
             if con:
                 con.close()

@@ -1,9 +1,12 @@
 import sqlite3
 from discord.ext import commands
 import os
+
+# - Path to sql folder for databases.
 root_dir = os.path.realpath(
     os.path.join(os.path.dirname(__file__), '..')
     )
+db_path = os.path.join(root_dir, "sql")
 
 async def log_cmd_first(cur, con, ctx):
     '''
@@ -72,25 +75,33 @@ async def log_cmd_off(cur, con, ctx):
 
 
 async def voice_state(before, after, channel, member):
+    '''
+    Grabs the channel that the user was in before.
+    Checks it against the channel that they just left.\n
+    Sends a message when a user joins/leaves a channel.
+    '''
     if before.channel != after.channel:
         voice_channel_name = after.channel.name if after.channel else before.channel.name
-        if before.channel:
+        if before.channel is not None:
             await channel.send(f"{member.name} left {voice_channel_name}.")
-            print(f"{member.name} left {voice_channel_name}.")
-        if after.channel:
+        if after.channel is not None:
                 await channel.send(f"{member.name} joined {voice_channel_name}.")
-                print(f"{member.name} joined {voice_channel_name}")
 
 
-async def log_check(guild, column_name):
+async def database_check(guild, column_name, table_name):
+    '''
+    A function to check the database.\n
+    Replace the 'column_name' and 'table_name' to
+    check for data using those conditions.
+    '''
     db_path = os.path.join(root_dir, "sql")
-    con = sqlite3.connect(f"{db_path}/{guild.id}.db")
+    con = sqlite3.connect(f"{db_path}/{guild}.db")
     cur = con.cursor()
 
     check = cur.execute(
         f"""
         SELECT {column_name}
-        FROM logs
+        FROM {table_name}
         """
         )
     check_res = check.fetchone()
@@ -98,14 +109,18 @@ async def log_check(guild, column_name):
     return check_res[0]
 
 
-async def turn_on_logs(ctx, column_name):
-    db_path = os.path.join(root_dir, "sql")
+async def toggle_on(ctx, column_name, table_name):
+    '''
+    Changes a 0 to a 1 in the database. Effectively
+    'turning on' a Domo event or command.\n
+    As with the database check function, change the
+    'column_name' and 'table_name'.
+    '''
     con = sqlite3.connect(f"{db_path}/{ctx.guild.id}.db")
     cur = con.cursor()
-
     cur.execute(
         f"""
-        UPDATE logs
+        UPDATE {table_name}
         SET {column_name} = ?
         """, (1,)
     )
@@ -113,14 +128,18 @@ async def turn_on_logs(ctx, column_name):
     con.close()
 
 
-async def turn_off_logs(ctx, column_name):
-    db_path = os.path.join(root_dir, "sql")
+async def toggle_off(ctx, column_name, table_name):
+    '''
+    Changes a 1 to a 0 in the database. Effectively
+    'turning off' a Domo event or command.\n
+    As with the database check function, change the
+    'column_name' and 'table_name'.
+    '''
     con = sqlite3.connect(f"{db_path}/{ctx.guild.id}.db")
     cur = con.cursor()
-
     cur.execute(
         f"""
-        UPDATE logs
+        UPDATE {table_name}
         SET {column_name} = ?
         """, (0,)
     )
@@ -131,31 +150,55 @@ async def turn_off_logs(ctx, column_name):
 class Logs(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-
+    
     
     @commands.command(name = "logtest")
     @commands.has_permissions(administrator = True)
-    async def test(self, ctx):
-        guild = ctx.guild
-        root_dir = os.path.realpath(
-            os.path.join(os.path.dirname(__file__), '..')
-        )
-        db_path = os.path.join(root_dir, "sql")
+    async def log_test(self, ctx):
+        '''
+        A command that displays the data stored in the
+        'logs' table in the server database.\n
+        Effectively shows what the logs channel is set to
+        and the features that have been toggled on or off.
+        '''
         con = sqlite3.connect(f"{db_path}/{ctx.guild.id}.db")
         try:
-            log_res = await log_check(guild, "channel_id")
-            vlog_res = await log_check(guild, "voice")
-            vlog_res_map = {0: "OFF", 1: "ON"}
-            jlog_res = await log_check(guild, "user_join")
-            jlog_res_map = {0: "OFF", 1: "ON"}
+            cur = con.cursor()
+            cur.execute("SELECT * FROM logs")
+            result = cur.fetchone()
+
+            # - Process the fetched result
+            logs_data = {
+                "logs_chan": "None",
+                "vlog_res": None,
+            }
+
+            if result is not None:
+                logs_data["logs_chan"] = result[0]
+                logs_data["vlog_res"] = result[1]
+
+            # - Convert integer values to corresponding strings
+            on_off_map = {0: "OFF", 1: "ON"}
+            
             await ctx.send(
-                f"Logs channel: {log_res}\n"
-                f"Voice logs: {vlog_res_map.get(vlog_res)}\n"
-                f"Join message: {jlog_res_map.get(jlog_res)}"
+                f"**Logs channel:** " 
+                f"{logs_data['logs_chan']}\n"
+                f"**Voice logs:** " 
+                f"{on_off_map.get(logs_data['vlog_res'])}\n"
                 )
         except sqlite3.Error as e:
-            await ctx.send("Command failed, check terminal.")
-            print(e)
+            if len(e.args) > 1:
+                await ctx.send(
+                    "I cannot execute the command. "
+                    "Please check my terminal and logs!")
+                print(f"[COMMAND ERROR: log_test] Error: {e}"
+                    f"Error code: {e.args[0]}"
+                    f"Error message: {e.args[1]}")
+            else:
+                await ctx.send(
+                    "I cannot execute the command. "
+                    "Please check my terminal and logs!")
+                print(f"[COMMAND ERROR: log_test] Error: {e}")
         finally:
             if con:
                 con.close()
@@ -169,10 +212,6 @@ class Logs(commands.Cog):
         that this command was entered in.
         Stores the preference in a SQL database.
         '''
-        root_dir = os.path.realpath(
-            os.path.join(os.path.dirname(__file__), '..')
-            )
-        db_path = os.path.join(root_dir, "sql")
         con = sqlite3.connect(f"{db_path}/{ctx.guild.id}.db")
         cur = con.cursor()
         try:
@@ -190,11 +229,18 @@ class Logs(commands.Cog):
             elif ctx.channel.id == chan_check_res[0]:
                 await log_cmd_off(cur, con, ctx)
         except sqlite3.Error as e:
-            await ctx.send(
-                "I cannot execute the command. " 
-                "Please check my terminal!"
-                )
-            print(f"[COMMAND ERROR: $logs] Error: {e} ")
+            if len(e.args) > 1:
+                await ctx.send(
+                    "I cannot execute the command. "
+                    "Please check my terminal and logs!")
+                print(f"[COMMAND ERROR: logs] Error: {e}"
+                    f"Error code: {e.args[0]}"
+                    f"Error message: {e.args[1]}")
+            else:
+                await ctx.send(
+                    "I cannot execute the command. "
+                    "Please check my terminal and logs!")
+                print(f"[COMMAND ERROR: logs] Error: {e}")
         finally:
             if con:
                 con.close()
@@ -209,18 +255,15 @@ class Logs(commands.Cog):
         Requires you to set a 'logs' channel by using
         the $logs command.
         '''
-        guild = ctx.guild
-        root_dir = os.path.realpath(
-        os.path.join(os.path.dirname(__file__), '..'))
-        db_path = os.path.join(root_dir, "sql")
+        guild = ctx.guild.id
         con = sqlite3.connect(f"{db_path}/{ctx.guild.id}.db")
         try:
-            log_chan = await log_check(guild, 'channel_id')
-            voice_log = await log_check(guild, 'voice')
+            log_chan = await database_check(guild, "channel_id", "logs")
+            voice_log = await database_check(guild, "voice", "logs")
 
             if (log_chan is not None and
                 voice_log == 0):
-                await turn_on_logs(ctx, 'voice')
+                await toggle_on(ctx, 'voice', 'logs')
                 await ctx.send(
                 "I will now send voice channel updates to the server!"
                 )
@@ -229,7 +272,7 @@ class Logs(commands.Cog):
                 )
             elif (log_chan is not None and
                 voice_log == 1):
-                await turn_off_logs(ctx, 'voice')
+                await toggle_off(ctx, 'voice', 'logs')
                 await ctx.send(
                 "I will no longer send voice channel updates to the server."
                 )
@@ -237,11 +280,18 @@ class Logs(commands.Cog):
                     f"[COMMAND: $voicelog] Successfully turned off logs in: {ctx.guild}."
                 )
         except sqlite3.Error as e:
-            await ctx.send(
-                "I cannot execute the command. "
-                "Please check my terminal and logs!"
-            )
-            print(f"[COMMAND: $voicelog] Error: {e}")
+            if len(e.args) > 1:
+                await ctx.send(
+                    "I cannot execute the command. "
+                    "Please check my terminal and logs!")
+                print(f"[COMMAND ERROR: voicelog] Error: {e}"
+                    f"Error code: {e.args[0]}"
+                    f"Error message: {e.args[1]}")
+            else:
+                await ctx.send(
+                    "I cannot execute the command. "
+                    "Please check my terminal and logs!")
+                print(f"[COMMAND ERROR: voicelog] Error: {e}")
         finally:
             if con:
                 con.close()
@@ -249,27 +299,30 @@ class Logs(commands.Cog):
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
-        ctx = member.guild
-        guild = ctx
-        # - Check if logs enabled.
-        root_dir = os.path.realpath(
-        os.path.join(os.path.dirname(__file__), '..'))
-        db_path = os.path.join(root_dir, "sql")
-        con = sqlite3.connect(f"{db_path}/{ctx.id}.db")
+        guild = member.guild.id
+        # Check if logs are enabled.
+        con = sqlite3.connect(f"{db_path}/{guild}.db")
         try:
-            chan_id = await log_check(guild, 'channel_id')
-            channel = ctx.get_channel(chan_id)
-            voice_log = await log_check(guild, 'voice')
+            chan_id = await database_check(guild, "channel_id", "logs")
+            channel = member.guild.get_channel(chan_id)
+            voice_log = await database_check(guild, "voice", "logs")
 
+            # Check for logs channel id in database and if
+            # voice logs are toggled on.
             if (channel is not None and
             voice_log == 1):
                 await voice_state(before, after, channel, member)
 
         except sqlite3.Error as e:
-            print(f"[VOICE_STATE_UPDATE] Error: {e}")
+            if len(e.args) > 1:
+                print(f"[EVENT ERROR: on_voice_state_update] Error: {e}"
+                    f"Error code: {e.args[0]}"
+                    f"Error message: {e.args[1]}")
+            else:
+                print(f"[EVENT ERROR: on_voice_state_update] Error: {e}")
         finally:
             if con:
-                con.close()
+                con.close()   
 
 
 async def setup(bot):

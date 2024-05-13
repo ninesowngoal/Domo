@@ -17,7 +17,7 @@ import logging
 import logging.handlers
 
 logger = logging.getLogger('discord')
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.ERROR)
 logging.getLogger('discord.http').setLevel(logging.INFO)
 logging.getLogger('discord.gateway').setLevel(logging.INFO)
 
@@ -40,9 +40,9 @@ import sys
 # - import required dependencies
 import discord
 from discord.ext import commands
-#from discord import app_commands
 
-from events import server_join
+# - import events.
+from events import *
 
 intents = discord.Intents.default()
 intents.guilds = True
@@ -74,6 +74,7 @@ else:
         config = json.load(file)
 
 server_join.server_join(bot)
+server_leave.server_leave(bot)
 
 @bot.event 
 async def on_ready():
