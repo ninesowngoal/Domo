@@ -1,4 +1,4 @@
-# DOMO
+# Domo
 Domo is a discord bot made for administrative purposes.
 
 She is an admin bot that is currently able to:
